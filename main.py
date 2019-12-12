@@ -61,7 +61,7 @@ def incoming():
                     urllib.request.urlretrieve(
                         message.media, os.path.join(image_dir, image_name + '.' + image_ext))
                     viber.send_messages(viber_request.sender.id,
-                                        [TextMessage(text="Сохранил изображение с именем " + image_name)])
+                                        [TextMessage(text="Сохранил изображение с именем: " + image_name)])
                 else:
                     viber.send_messages(viber_request.sender.id,
                                         [TextMessage(text="Не смог найти лицо на изображении")])
