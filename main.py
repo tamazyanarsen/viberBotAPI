@@ -98,7 +98,7 @@ def incoming():
     elif isinstance(viber_request, ViberSubscribedRequest) or isinstance(viber_request, ViberUnsubscribedRequest):
         pass
     elif isinstance(viber_request, ViberFailedRequest):
-        logger.warn(
+        logger.warning(
             "client failed receiving message. failure: {0}".format(viber_request))
 
     return Response(status=200)
