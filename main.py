@@ -28,7 +28,7 @@ logger.addHandler(handler)
 
 app = Flask(__name__)
 viber = Api(BotConfiguration(
-    name='PythonSampleBot',
+    name='Ваш преданный бот',
     avatar='http://viber.com/avatar.jpg',
     auth_token=auth_token
 ))
@@ -60,6 +60,8 @@ def incoming():
                     # biden_encoding = enc[0]
                     urllib.request.urlretrieve(
                         message.media, os.path.join(image_dir, image_name + '.' + image_ext))
+                    viber.send_messages(viber_request.sender.id,
+                                        [TextMessage(text="Сохранил изображение с именем " + image_name)])
                 else:
                     viber.send_messages(viber_request.sender.id,
                                         [TextMessage(text="Не смог найти лицо на изображении")])
@@ -81,7 +83,7 @@ def incoming():
                         results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
                         print(results)
                         viber.send_messages(viber_request.sender.id,
-                                            [TextMessage(text="Нашел" + '.'.join(f.split('.')[:-1]))])
+                                            [TextMessage(text="Нашел: " + '.'.join(f.split('.')[:-1]))])
                         break
                     else:
                         viber.send_messages(viber_request.sender.id,
