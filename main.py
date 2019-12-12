@@ -81,22 +81,22 @@ def incoming():
                         known_image = face_recognition.load_image_file(os.path.join(image_dir, f))
                         biden_encoding = face_recognition.face_encodings(known_image)[0]
                         results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
-                        print(results)
-                        viber.send_messages(viber_request.sender.id,
-                                            [TextMessage(text="Нашел: " + '.'.join(f.split('.')[:-1]))])
-                        break
+                        if results[0]:
+                            viber.send_messages(viber_request.sender.id,
+                                                [TextMessage(text="Нашел: " + '.'.join(f.split('.')[:-1]))])
+                            break
                     else:
                         viber.send_messages(viber_request.sender.id,
                                             [TextMessage(text="Не смог распознать лицо среди уже известных")])
                 os.remove(os.path.join(test_image_dir, full_image_name))
         else:
             viber.send_messages(viber_request.sender.id, [message])
-    elif isinstance(viber_request, ViberConversationStartedRequest) \
-            or isinstance(viber_request, ViberSubscribedRequest) \
-            or isinstance(viber_request, ViberUnsubscribedRequest):
-        viber.send_messages(viber_request.sender.id, [
-            TextMessage(None, None, viber_request.get_event_type())
+    elif isinstance(viber_request, ViberConversationStartedRequest):
+        viber.send_messages(viber_request.user.id, [
+            TextMessage(None, None, viber_request.type)
         ])
+    elif isinstance(viber_request, ViberSubscribedRequest) or isinstance(viber_request, ViberUnsubscribedRequest):
+        pass
     elif isinstance(viber_request, ViberFailedRequest):
         logger.warn(
             "client failed receiving message. failure: {0}".format(viber_request))
