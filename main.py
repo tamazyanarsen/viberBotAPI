@@ -15,6 +15,7 @@ from flask import Flask, request, Response
 import urllib.request
 import os
 import face_recognition
+import concurrent.futures
 
 auth_token = '4abd2e18a1e7d470-bf895d5fea2629c7-b296bff270dd40bf'
 
@@ -43,69 +44,71 @@ def incoming():
         request.get_data()))
 
     viber_request = viber.parse_request(request.get_data().decode('utf8'))
-
-    if isinstance(viber_request, ViberMessageRequest):
-        message = viber_request.message
-        if isinstance(message, PictureMessage):
-            print('\n\n\n', message.text, message.media)
-            image_ext = message.media.split('?')[0].split('.')[-1]
-            image_name = message.text if message.text else False
-            if bool(image_name):
-                urllib.request.urlretrieve(
-                    message.media, os.path.join(test_image_dir, image_name + '.' + image_ext))
-                known_image = face_recognition.load_image_file(
-                    os.path.join(test_image_dir, image_name + '.' + image_ext))
-                enc = face_recognition.face_encodings(known_image)
-                if len(enc) > 0:
-                    # biden_encoding = enc[0]
+    def test(viber_request):
+        if isinstance(viber_request, ViberMessageRequest):
+            message = viber_request.message
+            if isinstance(message, PictureMessage):
+                print('\n\n\n', message.text, message.media)
+                image_ext = message.media.split('?')[0].split('.')[-1]
+                image_name = message.text if message.text else False
+                if bool(image_name):
                     urllib.request.urlretrieve(
-                        message.media, os.path.join(image_dir, image_name + '.' + image_ext))
-                    viber.send_messages(viber_request.sender.id,
-                                        [TextMessage(text="Сохранил изображение с именем: " + image_name)])
-                else:
-                    viber.send_messages(viber_request.sender.id,
-                                        [TextMessage(text="Не смог найти лицо на изображении")])
-                os.remove(os.path.join(test_image_dir, image_name + '.' + image_ext))
-            else:
-                full_image_name = 'test' + '.' + image_ext
-                urllib.request.urlretrieve(
-                    message.media, os.path.join(test_image_dir, full_image_name))
-                unknown_image = face_recognition.load_image_file(os.path.join(test_image_dir, full_image_name))
-                face_enc = face_recognition.face_encodings(unknown_image)
-                if len(face_enc) == 0:
-                    viber.send_messages(viber_request.sender.id,
-                                        [TextMessage(text="Не смог найти лицо на изображении")])
-                else:
-                    unknown_encoding = face_enc[0]
-                    for f in os.listdir(image_dir):
-                        known_image = face_recognition.load_image_file(os.path.join(image_dir, f))
-                        biden_encoding = face_recognition.face_encodings(known_image)[0]
-                        results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
-                        if results[0]:
-                            viber.send_messages(viber_request.sender.id,
-                                                [TextMessage(text="Нашел: " + '.'.join(f.split('.')[:-1]))])
-                            break
+                        message.media, os.path.join(test_image_dir, image_name + '.' + image_ext))
+                    known_image = face_recognition.load_image_file(
+                        os.path.join(test_image_dir, image_name + '.' + image_ext))
+                    enc = face_recognition.face_encodings(known_image)
+                    if len(enc) > 0:
+                        urllib.request.urlretrieve(
+                            message.media, os.path.join(image_dir, image_name + '.' + image_ext))
+                        viber.send_messages(viber_request.sender.id,
+                                            [TextMessage(text="Сохранил изображение с именем: " + image_name)])
                     else:
                         viber.send_messages(viber_request.sender.id,
-                                            [TextMessage(text="Не смог распознать лицо среди уже известных")])
-                os.remove(os.path.join(test_image_dir, full_image_name))
-        else:
-            viber.send_messages(viber_request.sender.id, [message])
-    elif isinstance(viber_request, ViberConversationStartedRequest):
-        viber.send_messages(viber_request.user.id, [
-            TextMessage(None, None, viber_request.type)
-        ])
-    elif isinstance(viber_request, ViberSubscribedRequest) or isinstance(viber_request, ViberUnsubscribedRequest):
-        pass
-    elif isinstance(viber_request, ViberFailedRequest):
-        logger.warning(
-            "client failed receiving message. failure: {0}".format(viber_request))
+                                            [TextMessage(text="Не смог найти лицо на изображении")])
+                    os.remove(os.path.join(test_image_dir, image_name + '.' + image_ext))
+                else:
+                    full_image_name = 'test' + '.' + image_ext
+                    urllib.request.urlretrieve(
+                        message.media, os.path.join(test_image_dir, full_image_name))
+                    unknown_image = face_recognition.load_image_file(os.path.join(test_image_dir, full_image_name))
+                    face_enc = face_recognition.face_encodings(unknown_image)
+                    if len(face_enc) == 0:
+                        viber.send_messages(viber_request.sender.id,
+                                            [TextMessage(text="Не смог найти лицо на изображении")])
+                    else:
+                        unknown_encoding = face_enc[0]
+                        for f in os.listdir(image_dir):
+                            known_image = face_recognition.load_image_file(os.path.join(image_dir, f))
+                            biden_encoding = face_recognition.face_encodings(known_image)[0]
+                            results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
+                            if results[0]:
+                                viber.send_messages(viber_request.sender.id,
+                                                    [TextMessage(text="Нашел: " + '.'.join(f.split('.')[:-1]))])
+                                break
+                        else:
+                            viber.send_messages(viber_request.sender.id,
+                                                [TextMessage(text="Не смог распознать лицо среди уже известных")])
+                    os.remove(os.path.join(test_image_dir, full_image_name))
+            else:
+                viber.send_messages(viber_request.sender.id, [message])
+        elif isinstance(viber_request, ViberConversationStartedRequest):
+            viber.send_messages(viber_request.user.id, [
+                TextMessage(None, None, viber_request.type)
+            ])
+        elif isinstance(viber_request, ViberSubscribedRequest) or isinstance(viber_request, ViberUnsubscribedRequest):
+            pass
+        elif isinstance(viber_request, ViberFailedRequest):
+            logger.warning(
+                "client failed receiving message. failure: {0}".format(viber_request))
 
-    return Response(status=200)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(test, viber_request)
+        future.result()
+        return Response(status=200)
 
 
 def set_webhook(viber):
-    viber.set_webhook('https://46f7b12b.ngrok.io/')
+    viber.set_webhook('https://52eb072c.ngrok.io')
 
 
 if __name__ == "__main__":
